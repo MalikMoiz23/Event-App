@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../models/event.dart';
+import '../../models/event_draft.dart';
 import '../../services/event_service.dart';
 import '../../theme/app_colors.dart';
 
@@ -73,7 +74,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
     // `file.path` is a blob: URL on web with no real extension - use `name`
     // instead, which holds the original filename on every platform.
     final name = file.name;
-    final extension = name.contains('.') ? name.split('.').last.toLowerCase() : 'jpg';
+    final extension = name.contains('.')
+        ? name.split('.').last.toLowerCase()
+        : 'jpg';
     setState(() {
       _pickedImageBytes = bytes;
       _pickedImageExtension = extension;
@@ -132,36 +135,45 @@ class _EventFormScreenState extends State<EventFormScreen> {
       }
 
       final charges = double.tryParse(_chargesController.text.trim()) ?? 0;
+      final existing = widget.existingEvent;
 
-      if (_isEditing) {
-        await widget.eventService.updateEvent(
-          id: widget.existingEvent!.id,
-          name: _nameController.text.trim(),
-          description: _descriptionController.text.trim(),
-          charges: charges,
-          category: _category,
-          imageUrl: imageUrl,
-          eventDate: _eventDate,
-          endDate: _endDate,
-        );
+      // The venue, capacity and tag fields are not on this form yet, so they
+      // are carried straight over from the stored row - a draft writes every
+      // column, and rebuilding one from the form alone would blank them.
+      final draft = EventDraft(
+        name: _nameController.text,
+        description: _descriptionController.text,
+        charges: charges,
+        category: _category,
+        eventDate: _eventDate,
+        endDate: _endDate,
+        imageUrl: imageUrl,
+        venueName: existing?.venueName,
+        venueAddress: existing?.venueAddress,
+        latitude: existing?.latitude,
+        longitude: existing?.longitude,
+        organizerName: existing?.organizerName,
+        organizerPhone: existing?.organizerPhone,
+        organizerEmail: existing?.organizerEmail,
+        capacity: existing?.capacity,
+        tags: existing?.tags ?? const [],
+        isPublished: existing?.isPublished ?? true,
+      );
+
+      if (existing != null) {
+        await widget.eventService.updateEvent(existing.id, draft);
       } else {
         await widget.eventService.createEvent(
-          name: _nameController.text.trim(),
-          description: _descriptionController.text.trim(),
-          charges: charges,
-          category: _category,
-          imageUrl: imageUrl,
-          eventDate: _eventDate,
-          endDate: _endDate,
+          draft,
           createdBy: widget.createdBy,
         );
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save event: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save event: $e')));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -172,9 +184,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('EEE, d MMM yyyy • h:mm a');
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Event' : 'New Event'),
-      ),
+      appBar: AppBar(title: Text(_isEditing ? 'Edit Event' : 'New Event')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -213,8 +223,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(labelText: 'Event name'),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Name is required'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -235,7 +246,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
                     decimal: true,
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Charges is required';
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Charges is required';
+                    }
                     if (double.tryParse(v.trim()) == null) {
                       return 'Enter a valid number';
                     }
@@ -297,10 +310,17 @@ class _EventFormScreenState extends State<EventFormScreen> {
       return Image.memory(_pickedImageBytes!, fit: BoxFit.cover);
     }
     if (_existingImageUrl != null) {
-      return CachedNetworkImage(imageUrl: _existingImageUrl!, fit: BoxFit.cover);
+      return CachedNetworkImage(
+        imageUrl: _existingImageUrl!,
+        fit: BoxFit.cover,
+      );
     }
     return const Center(
-      child: Icon(Icons.add_photo_alternate_outlined, size: 40, color: AppColors.hitRed),
+      child: Icon(
+        Icons.add_photo_alternate_outlined,
+        size: 40,
+        color: AppColors.hitRed,
+      ),
     );
   }
 }

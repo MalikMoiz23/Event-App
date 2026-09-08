@@ -45,5 +45,17 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>HIT EVO uses the camera to scan ticket QR codes at the event gate.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>HIT EVO needs photo access so you can pick a cover image for an event.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>mailto</string>
+		<string>https</string>
+		<string>maps</string>
+		<string>comgooglemaps</string>
+	</array>
 </dict>
 </plist>
