@@ -1,64 +1,68 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/auth_service.dart';
-import '../services/event_service.dart';
-import '../services/favorite_service.dart';
-import '../services/rsvp_service.dart';
+
 import '../services/session_provider.dart';
+import '../theme/app_dimens.dart';
 import '../theme/hit_logo.dart';
 import 'admin/admin_home_screen.dart';
 import 'auth/login_screen.dart';
-import 'user/user_home_screen.dart';
+import 'user/user_shell.dart';
 
-/// Root router: shows a splash while the session bootstraps, the login flow
-/// when signed out, and routes to the admin or user home screen by role.
+/// Root router: a splash while the session bootstraps, the sign-in flow when
+/// signed out, and the admin or attendee shell by role.
 class AuthGate extends StatelessWidget {
-  const AuthGate({
-    super.key,
-    required this.authService,
-    required this.eventService,
-    required this.rsvpService,
-    required this.favoriteService,
-  });
-
-  final AuthService authService;
-  final EventService eventService;
-  final RsvpService rsvpService;
-  final FavoriteService favoriteService;
+  const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<SessionProvider>(
       builder: (context, session, _) {
-        if (session.loading) {
-          return const Scaffold(
-            body: Center(child: HitLogo(size: 96)),
-          );
-        }
+        if (session.loading) return const _Splash();
+
         final profile = session.profile;
         if (profile == null) {
           return LoginScreen(
-            authService: authService,
             errorMessage: session.authError,
             onErrorShown: session.clearAuthError,
           );
         }
-        if (profile.isAdmin) {
-          return AdminHomeScreen(
-            profile: profile,
-            eventService: eventService,
-            authService: authService,
-            rsvpService: rsvpService,
-          );
-        }
-        return UserHomeScreen(
-          profile: profile,
-          eventService: eventService,
-          authService: authService,
-          rsvpService: rsvpService,
-          favoriteService: favoriteService,
-        );
+
+        // Keyed by id so switching accounts rebuilds the shell from scratch
+        // rather than reusing the previous user's tab state and streams.
+        return profile.isAdmin
+            ? AdminHomeScreen(key: ValueKey(profile.id), profile: profile)
+            : UserShell(key: ValueKey(profile.id), profile: profile);
       },
+    );
+  }
+}
+
+class _Splash extends StatelessWidget {
+  const _Splash();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const HitLogo(size: 88),
+            Gap.h24,
+            SizedBox(
+              width: 96,
+              child: ClipRRect(
+                borderRadius: Corner.pillAll,
+                child: LinearProgressIndicator(
+                  minHeight: 3,
+                  backgroundColor: scheme.surfaceContainerHigh,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

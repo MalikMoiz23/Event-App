@@ -2,7 +2,8 @@ import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../core/formatters.dart';
 import '../../models/event.dart';
 import '../../models/event_draft.dart';
 import '../../services/event_service.dart';
@@ -11,12 +12,10 @@ import '../../theme/app_colors.dart';
 class EventFormScreen extends StatefulWidget {
   const EventFormScreen({
     super.key,
-    required this.eventService,
     required this.createdBy,
     this.existingEvent,
   });
 
-  final EventService eventService;
   final String createdBy;
   final Event? existingEvent;
 
@@ -124,11 +123,17 @@ class _EventFormScreenState extends State<EventFormScreen> {
       );
       return;
     }
+    // Captured before the first await. Reaching for context across an async
+    // gap is exactly what use_build_context_synchronously exists to catch.
+    final service = context.read<EventService>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     setState(() => _submitting = true);
     try {
       String? imageUrl = _existingImageUrl;
       if (_pickedImageBytes != null && _pickedImageExtension != null) {
-        imageUrl = await widget.eventService.uploadCoverImage(
+        imageUrl = await service.uploadCoverImage(
           bytes: _pickedImageBytes!,
           fileExtension: _pickedImageExtension!,
         );
@@ -161,20 +166,15 @@ class _EventFormScreenState extends State<EventFormScreen> {
       );
 
       if (existing != null) {
-        await widget.eventService.updateEvent(existing.id, draft);
+        await service.updateEvent(existing.id, draft);
       } else {
-        await widget.eventService.createEvent(
-          draft,
-          createdBy: widget.createdBy,
-        );
+        await service.createEvent(draft, createdBy: widget.createdBy);
       }
-      if (mounted) Navigator.of(context).pop();
+      navigator.pop();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to save event: $e')));
-      }
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not save the event: $e')),
+      );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -182,7 +182,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('EEE, d MMM yyyy • h:mm a');
     return Scaffold(
       appBar: AppBar(title: Text(_isEditing ? 'Edit Event' : 'New Event')),
       body: SafeArea(
@@ -272,14 +271,14 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Starts'),
-                  subtitle: Text(dateFormat.format(_eventDate)),
+                  subtitle: Text(Formatters.mediumDateTime.format(_eventDate)),
                   trailing: const Icon(Icons.edit_calendar_outlined),
                   onTap: () => _pickDateTime(isStart: true),
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Ends'),
-                  subtitle: Text(dateFormat.format(_endDate)),
+                  subtitle: Text(Formatters.mediumDateTime.format(_endDate)),
                   trailing: const Icon(Icons.edit_calendar_outlined),
                   onTap: () => _pickDateTime(isStart: false),
                 ),
