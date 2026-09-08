@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/session_provider.dart';
 import '../theme/app_dimens.dart';
 import '../theme/hit_logo.dart';
-import 'admin/admin_home_screen.dart';
+import 'admin/admin_shell.dart';
 import 'auth/login_screen.dart';
 import 'user/user_shell.dart';
 
@@ -30,7 +30,7 @@ class AuthGate extends StatelessWidget {
         // Keyed by id so switching accounts rebuilds the shell from scratch
         // rather than reusing the previous user's tab state and streams.
         return profile.isAdmin
-            ? AdminHomeScreen(key: ValueKey(profile.id), profile: profile)
+            ? AdminShell(key: ValueKey(profile.id), profile: profile)
             : UserShell(key: ValueKey(profile.id), profile: profile);
       },
     );
