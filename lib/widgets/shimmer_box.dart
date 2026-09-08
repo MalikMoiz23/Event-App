@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 
-/// A single shimmering placeholder rectangle, used to build skeleton loading
-/// states instead of a bare spinner.
+import '../theme/app_dimens.dart';
+
+/// A shimmering placeholder rectangle.
+///
+/// Skeletons rather than a centred spinner, because the list that is loading
+/// has a known shape: showing that shape means the layout does not jump when
+/// the data lands, and the wait reads as "nearly there" instead of "stuck".
 class ShimmerBox extends StatefulWidget {
   const ShimmerBox({
     super.key,
-    this.height = 16,
+    this.height = 14,
     this.width,
-    this.borderRadius = 8,
+    this.borderRadius = Corner.xs,
   });
 
   final double height;
@@ -22,7 +27,7 @@ class _ShimmerBoxState extends State<ShimmerBox>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1300),
+    duration: const Duration(milliseconds: 1400),
   )..repeat();
 
   @override
@@ -33,11 +38,12 @@ class _ShimmerBoxState extends State<ShimmerBox>
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final base = dark ? Colors.white12 : Colors.black.withValues(alpha: 0.06);
-    final highlight = dark
-        ? Colors.white24
-        : Colors.black.withValues(alpha: 0.12);
+    final scheme = Theme.of(context).colorScheme;
+    final base = scheme.surfaceContainerHigh;
+    final highlight = Color.alphaBlend(
+      scheme.onSurface.withValues(alpha: 0.06),
+      base,
+    );
 
     return AnimatedBuilder(
       animation: _controller,
@@ -61,37 +67,83 @@ class _ShimmerBoxState extends State<ShimmerBox>
   }
 }
 
-/// Skeleton list mimicking [EventCard]'s layout, shown while events load.
+/// Skeleton rows matching the real event card's geometry - 88px thumbnail on
+/// the left, three lines of text on the right.
 class EventListShimmer extends StatelessWidget {
-  const EventListShimmer({super.key, this.itemCount = 3});
+  const EventListShimmer({super.key, this.itemCount = 5});
 
   final int itemCount;
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 8, bottom: 24),
+    return ListView.separated(
+      padding: Gap.listInsets,
       itemCount: itemCount,
+      separatorBuilder: (_, _) => Gap.h12,
       itemBuilder: (context, index) {
         return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
+            padding: const EdgeInsets.all(Gap.md),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ShimmerBox(height: 140, width: double.infinity, borderRadius: 10),
-                const SizedBox(height: 14),
-                const ShimmerBox(height: 16, width: 180),
-                const SizedBox(height: 10),
-                const ShimmerBox(height: 12, width: 120),
-                const SizedBox(height: 10),
-                const ShimmerBox(height: 12, width: 90),
+                const ShimmerBox(
+                  height: 88,
+                  width: 88,
+                  borderRadius: Corner.md,
+                ),
+                Gap.w12,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const ShimmerBox(height: 15, width: 180),
+                      Gap.h12,
+                      const ShimmerBox(height: 11, width: 130),
+                      Gap.h8,
+                      const ShimmerBox(height: 11, width: 96),
+                      Gap.h12,
+                      Row(
+                        children: [
+                          const ShimmerBox(height: 11, width: 64),
+                          const Spacer(),
+                          const ShimmerBox(height: 11, width: 44),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// Skeleton for the Discover carousel, so the hero row reserves its height
+/// before the first image arrives.
+class FeaturedShimmer extends StatelessWidget {
+  const FeaturedShimmer({super.key, this.width = 300});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: width * 10 / 16,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: Gap.pageInsets,
+        itemCount: 2,
+        separatorBuilder: (_, _) => Gap.w12,
+        itemBuilder: (_, _) => ShimmerBox(
+          width: width,
+          height: width * 10 / 16,
+          borderRadius: Corner.lg,
+        ),
+      ),
     );
   }
 }

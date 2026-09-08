@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/event.dart';
 import '../../services/event_service.dart';
 import '../../services/rsvp_service.dart';
-import '../../widgets/simple_bar_chart.dart';
+import '../../widgets/bar_chart.dart';
 import '../../widgets/stat_tile.dart';
 
 class AdminAnalyticsScreen extends StatelessWidget {
@@ -108,7 +108,7 @@ class AdminAnalyticsScreen extends StatelessWidget {
                       child: Center(child: Text('No RSVPs yet.')),
                     )
                   else
-                    SimpleBarChart(entries: chartEntries),
+                    HorizontalBarChart(entries: chartEntries),
                 ],
               );
             },
